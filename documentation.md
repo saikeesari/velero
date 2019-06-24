@@ -32,7 +32,7 @@ This [link](https://velero.io/docs/v1.0.0/ibm-config/) explains how to setup Vel
 * Configure and start the Velero server. Check the "Credentials and Configuration" section in this [link](https://velero.io/docs/v1.0.0/ibm-config/)
   * For easy installation follow the steps below.
     
-	`
+	```
 	#To deploy the Velero pre-requisities
 	kubectl apply -f config/common/00-prereqs.yaml
 	#To create a secret for your "Cloud Credentials" in the directory of the credentials file you just created, run:
@@ -42,7 +42,7 @@ This [link](https://velero.io/docs/v1.0.0/ibm-config/) explains how to setup Vel
 	#After configuring your bucket with the <BUCKET_NAME>,<REGION> and <URL_ACCESS_POINT> in the Backup Storage File as in the example shown below, start the Velero server 
 	kubectl apply -f config/ibm/05-backupstoragelocation.yaml
     kubectl apply -f config/ibm/10-deployment.yaml
-	`
+	```
 	(or) 
 	
 	Simply run the `cloudsecret.sh` to set the secret for the cloud credentials.
@@ -56,7 +56,7 @@ This [link](https://velero.io/docs/v1.0.0/ibm-config/) explains how to setup Vel
 	
 * Example Backup Storage File looks like this
 
-`yaml
+```
 apiVersion: velero.io/v1
 kind: BackupStorageLocation
 metadata:
@@ -70,7 +70,7 @@ spec:
     region: <YOUR_REGION>
     s3ForcePathStyle: "true"
     s3Url: <URL_ACCESS_POINT>
-`
+```
   * It is important to know what's going on behind the scenes before apply the pre-req's in the above link. 
     * Backup: CRD that stores information such as creation date, which namespaces should be included, which PVCs are attached, and so on.
 	* BackupLocation: CRD that stores information such as which region and object storage should be used to store backups.
