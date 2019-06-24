@@ -29,16 +29,24 @@ This [link](https://velero.io/docs/v1.0.0/ibm-config/) explains how to setup Vel
 * Create your [COS instance](https://cloud.ibm.com/docs/services/cloud-object-storage/basics?topic=cloud-object-storage-provision#creating-a-new-resource-instance).
 * Create an [S3 bucket](https://cloud.ibm.com/docs/services/cloud-object-storage?topic=cloud-object-storage-getting-started#create-buckets)
 * Define a [service](https://cloud.ibm.com/docs/services/cloud-object-storage/iam?topic=cloud-object-storage-service-credentials#service-credentials) that can store data in the bucket. Follow each and every step listed in the official document [here](https://velero.io/docs/v1.0.0/ibm-config/)  
+  * Create a Velero-specific credentials file `(credentials-velero)` in your local directory as listed in the [Velero's](https://velero.io/docs/v1.0.0/ibm-config/) document under "Define a service that can store data in the bucket" section.
+  ```
+  [default]
+  aws_access_key_id=<ACCESS_KEY_ID>
+  aws_secret_access_key=<SECRET_ACCESS_KEY>
+  ```
 * Configure and start the Velero server. Check the "Credentials and Configuration" section in this [link](https://velero.io/docs/v1.0.0/ibm-config/)
   * For easy installation follow the steps below.
     
 	```
 	#To deploy the Velero pre-requisities
 	kubectl apply -f config/common/00-prereqs.yaml
+	
 	#To create a secret for your "Cloud Credentials" in the directory of the credentials file you just created, run:
 	kubectl create secret generic cloud-credentials \
     --namespace <VELERO_NAMESPACE> \
     --from-file cloud=credentials-velero
+	
 	#After configuring your bucket with the <BUCKET_NAME>,<REGION> and <URL_ACCESS_POINT> in the Backup Storage File as in the example shown below, start the Velero server 
 	kubectl apply -f config/ibm/05-backupstoragelocation.yaml
     kubectl apply -f config/ibm/10-deployment.yaml
@@ -47,9 +55,10 @@ This [link](https://velero.io/docs/v1.0.0/ibm-config/) explains how to setup Vel
 	
 	Simply run the `cloudsecret.sh` to set the secret for the cloud credentials.
 	
-	`sh ./cloudsecret.sh <VELERO_NAMESPACE>
-	 ex:./cloudsecret.sh velero
-	`
+	```
+	./cloudsecret.sh <VELERO_NAMESPACE> 
+	ex:./cloudsecret.sh velero
+	```
 	After configuring your bucket with the <BUCKET_NAME>,<REGION> and <URL_ACCESS_POINT> in the Backup Storage File, start the Velero server by running 
 	
 	`velero-setup.sh` 
@@ -82,9 +91,12 @@ spec:
 
 ### Disaster Recovery Scenario:
 
-Now deploy a sample Nginx application with a specific namespace and we will check the Disaster-Management scenerio by taking a backup of the application simulate a disaster and show how we can restore it by using velero.
+Now deploy a sample Nginx application with a specific namespace and we will check the Disaster-Management scenerio by performing three steps:
+1. Take the backup of the application.
+2. Simulate the disaster by deleting the namespace.
+3. Recover the deleted resources with Velero.
 
-Using Kubectl create an nginx deployment.
+Using "kubectl" create an nginx deployment.
 
 ```
 cd $HOME/heptio-velero-config
@@ -137,7 +149,7 @@ velero restore create --from-backup nginx-example
 ```
 If you have an issue during the restore, refer to this [link](https://velero.io/docs/v1.0/debugging-restores/)
 
-If your backups or restores stuck in New phase,refer to the "General" section in this [link](https://velero.io/docs/v0.11.0/debugging-install/)
+If your backups or restores stuck in "New" phase,refer to the "General" section in this [link](https://velero.io/docs/v0.11.0/debugging-install/)
 
 ### What is [Restic](https://restic.net/)
 
@@ -146,27 +158,28 @@ From 0.9 version Restic support, Velero now supports taking backup of almost any
  This [Document](https://velero.io/docs/v1.0.0/restic/) will cover the following topics: 
   * What is Restic?
   * How to setup the Restic on your cluster?
-    * For easy installation. Check into the `config/minio` directory which you get from the extracts and follow the below steps
-	  * ```
-	     cd $HOME/heptio-velero-config
-		 kubectl apply -f config/minio/30-restic-daemonset.yaml
-	    ```
   * How backup and restore work with restic? 
   
 For Troubleshooting issues with the Restic refer this [link](https://velero.io/docs/v0.11.0/restic/#troubleshooting)
 
-### How to take the PV backup and Restore's using Velero with the Restic support. 
+### How to take the Persistent Volume backup and Restore using Velero with the Restic support. 
 
 In this case while you are trying to backup your PV, we have to annotate each pod that has volume to be backup. Though the example in document show using `kubectl` to set the annotations, you should add them via a helm chart or some other automation method.
 
 #### NOTE: Velero with Restic works in an incremental fashion. If you are restoring into the existing namespace, it will first check whether the namespace is present or not. If not, it creates the new namespace and adds the resources. If namespace already exists, It will not override the resources. It will just add the missing resources into the namespace.
 
 ### Now deploy a sample Nginx application with a Persistent Volume in a specific namespace and we will check the Disaster-Management scenerio by taking a backup of the volume and restore into the same namespace by simulating disaster.
-* Before you run the nginx example, in file config/nginx-app/with-pv.yaml:
-   * Replace <YOUR_STORAGE_CLASS_NAME> with your StorageClass name.
+* Before you run the nginx example, in file `config/nginx-app/with-pv.yaml`:
+   * Replace "<YOUR_STORAGE_CLASS_NAME>" with your StorageClass name.
 ```
 cd $HOME/heptio-velero-config
 kubectl apply -f config/nginx-app/with-pv.yaml
+```
+As we discussed in the above step we have to annotate the each pod that contains a volume to backup by running `annotate.sh`
+* 
+```     
+     annotate.sh <POD_NAMESPACE> <POD_NAME> <POD_VOLUMES>
+     Ex: annotate.sh nginx-example nginx-deployment-54669cd685-hlhjf nginx-logs 
 ```
 
 After the deployment is created, use velero to take backup the namespace by using the following command:
